@@ -2,6 +2,7 @@ from pyrogram.types import Message
 from bot.core.extractor import extractor
 from bot.helpers.queues import add_to_queue
 from bot.core.client import core
+from pytgcalls.types.stream import MediaStream, AudioQuality, VideoQuality
 import config
 
 async def play_logic(message: Message, query: str, video: bool = False):
@@ -26,9 +27,11 @@ async def play_logic(message: Message, query: str, video: bool = False):
 
     if pos == 1:
         try:
-            from pytgcalls.types.stream import AudioPiped, AudioVideoPiped
-            stream = AudioVideoPiped(stream_url) if video else AudioPiped(stream_url)
-            await core.call.join_group_call(chat_id, stream)
+            if video:
+                stream = MediaStream(stream_url, video_parameters=VideoQuality.HD_720p)
+            else:
+                stream = MediaStream(stream_url, audio_parameters=AudioQuality.HIGH)
+            await core.call.play(chat_id, stream)
             await m.edit(f"Playing **{title}**")
         except Exception as e:
             await m.edit(f"Error: {e}")
