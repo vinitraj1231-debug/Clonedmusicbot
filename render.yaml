@@ -1,0 +1,61 @@
+services:
+  - type: web
+    name: supreme-vc-music-bot
+    runtime: python
+    plan: free
+
+    buildCommand: |
+      apt-get update
+      apt-get install -y ffmpeg
+      pip install --upgrade pip
+      pip install -r requirements.txt
+
+    startCommand: python main.py
+
+    autoDeploy: true
+
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+
+      - key: API_ID
+        sync: false
+
+      - key: API_HASH
+        sync: false
+
+      - key: BOT_TOKEN
+        sync: false
+
+      - key: STRING_SESSION
+        sync: false
+
+      - key: REDIS_URI
+        sync: false
+
+      - key: OWNER_ID
+        sync: false
+
+      - key: LOG_GROUP_ID
+        sync: false
+
+      - key: SUPPORT_GROUP
+        sync: false
+
+      - key: SUPPORT_CHANNEL
+        sync: false
+
+      - key: BOT_NAME
+        value: Supreme VC Music Bot
+
+      - key: MAX_QUALITY
+        value: high
+
+      - key: AUTO_LEAVE
+        value: "True"
+
+      - key: AUTO_RESTART
+        value: "True"
+
+      - key: YT_COOKIES_PATH
+        value: cookies.txt
