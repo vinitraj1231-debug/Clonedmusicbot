@@ -1,0 +1,14 @@
+pyrogram
+pytgcalls[ffmpeg]
+tgcrypto
+yt-dlp
+motor
+redis
+python-dotenv
+beautifulsoup4
+aiohttp
+aiofiles
+dnspython
+psutil
+Pillow
+asyncio
