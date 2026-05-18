@@ -52,7 +52,7 @@ services:
         value: high
 
       - key: AUTO_LEAVE
-        value: "True"
+        value: "3600"
 
       - key: AUTO_RESTART
         value: "True"
