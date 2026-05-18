@@ -1,5 +1,5 @@
 pyrogram
-pytgcalls[ffmpeg]
+git+https://github.com/pytgcalls/pytgcalls
 tgcrypto
 yt-dlp
 motor
@@ -11,4 +11,3 @@ aiofiles
 dnspython
 psutil
 Pillow
-asyncio

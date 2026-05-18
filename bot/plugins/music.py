@@ -15,7 +15,7 @@ async def play_command(client: Client, message: Message):
 async def skip_command(client: Client, message: Message):
     from bot.core.client import core
     from bot.database.cache import cache
-    from pytgcalls.types.stream import AudioPiped
+    from pytgcalls.types.stream import MediaStream, AudioQuality
 
     chat_id = message.chat.id
     queue = await cache.get_queue(chat_id)
@@ -24,12 +24,12 @@ async def skip_command(client: Client, message: Message):
         queue.pop(0)
         await cache.set_queue(chat_id, queue)
         next_song = queue[0]
-        await core.call.change_stream(chat_id, AudioPiped(next_song["link"]))
+        await core.call.play(chat_id, MediaStream(next_song["link"], audio_parameters=AudioQuality.HIGH))
         await message.reply_text(f"Skipped! Now playing: **{next_song['title']}**")
     else:
         await cache.clear_queue(chat_id)
         try:
-            await core.call.leave_group_call(chat_id)
+            await core.call.leave_call(chat_id)
         except:
             pass
         await message.reply_text("Queue empty, leaving voice chat.")
@@ -42,7 +42,7 @@ async def stop_command(client: Client, message: Message):
     chat_id = message.chat.id
     await cache.clear_queue(chat_id)
     try:
-        await core.call.leave_group_call(chat_id)
+        await core.call.leave_call(chat_id)
     except:
         pass
     await message.reply_text("Playback stopped.")
