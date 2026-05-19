@@ -1,4 +1,5 @@
 import os
+import sys
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -12,11 +13,18 @@ def get_int_env(key: str, default: int) -> int:
     except ValueError:
         return default
 
-API_ID = get_int_env("API_ID", 12345)
+# Essential Variables
+API_ID = get_int_env("API_ID", 0)
 API_HASH = os.getenv("API_HASH", "")
 BOT_TOKEN = os.getenv("BOT_TOKEN", "")
 STRING_SESSION = os.getenv("STRING_SESSION", "")
 MONGO_DB_URI = os.getenv("MONGO_DB_URI", "")
+
+if not (API_ID and API_HASH and BOT_TOKEN and STRING_SESSION and MONGO_DB_URI):
+    print("CRITICAL: Missing essential environment variables (API_ID, API_HASH, BOT_TOKEN, STRING_SESSION, MONGO_DB_URI)")
+    # We don't exit here to allow Docker/Render to show the error in logs properly,
+    # but the bot will fail later during startup.
+
 REDIS_URI = os.getenv("REDIS_URI", "redis://localhost:6379")
 
 OWNER_ID = get_int_env("OWNER_ID", 0)

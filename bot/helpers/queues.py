@@ -1,6 +1,4 @@
 from bot.database.cache import cache
-from bot.core.extractor import extractor
-from pytgcalls.types.stream import AudioPiped
 import logging
 
 LOGGER = logging.getLogger("QueueManager")
