@@ -25,7 +25,7 @@ async def start_clone(user_id, bot_token):
         LOGGER.error(f"Failed to start clone for {user_id}: {e}")
         return None
 
-@Client.on_message(filters.command("clone") & filters.private)
+@Client.on_message(filters.command("clone", prefixes=config.PREFIXES) & filters.private)
 async def clone_bot(client: Client, message: Message):
     if len(message.command) < 2:
         return await message.reply_text("Usage: `/clone BOT_TOKEN`")
@@ -50,7 +50,7 @@ async def clone_bot(client: Client, message: Message):
     else:
         await m.edit("Failed to start the clone. Check your token.")
 
-@Client.on_message(filters.command("clones") & filters.user(config.OWNER_ID))
+@Client.on_message(filters.command("clones", prefixes=config.PREFIXES) & filters.user(config.OWNER_ID))
 async def list_clones(client: Client, message: Message):
     clones = await db.clones.find().to_list(100)
     if not clones:

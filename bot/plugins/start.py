@@ -2,7 +2,7 @@ from pyrogram import filters, Client
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 import config
 
-@Client.on_message(filters.command("start") & filters.private)
+@Client.on_message(filters.command("start", prefixes=config.PREFIXES) & filters.private)
 async def start_command(client, message: Message):
     await message.reply_text(
         f"Hello {message.from_user.mention}!\n\nI am {config.BOT_NAME}, a futuristic VC Music Bot.",
@@ -20,6 +20,6 @@ async def start_command(client, message: Message):
         ])
     )
 
-@Client.on_message(filters.command("ping"))
+@Client.on_message(filters.command("ping", prefixes=config.PREFIXES))
 async def ping_command(client, message: Message):
     await message.reply_text("Pong! 🏓")

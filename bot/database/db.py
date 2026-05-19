@@ -10,6 +10,13 @@ class Database:
         self.clones = self.db["clones"]
         self.settings = self.db["settings"]
 
+    async def ping(self):
+        try:
+            await self.db.command("ping")
+            return True
+        except Exception:
+            return False
+
     # --- User Management ---
     async def is_sudo(self, user_id: int):
         if user_id in config.SUDO_USERS:

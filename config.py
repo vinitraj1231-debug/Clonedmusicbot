@@ -20,10 +20,17 @@ BOT_TOKEN = os.getenv("BOT_TOKEN", "")
 STRING_SESSION = os.getenv("STRING_SESSION", "")
 MONGO_DB_URI = os.getenv("MONGO_DB_URI", "")
 
-if not (API_ID and API_HASH and BOT_TOKEN and STRING_SESSION and MONGO_DB_URI):
-    print("CRITICAL: Missing essential environment variables (API_ID, API_HASH, BOT_TOKEN, STRING_SESSION, MONGO_DB_URI)")
-    # We don't exit here to allow Docker/Render to show the error in logs properly,
-    # but the bot will fail later during startup.
+missing_vars = []
+if not API_ID: missing_vars.append("API_ID")
+if not API_HASH: missing_vars.append("API_HASH")
+if not BOT_TOKEN: missing_vars.append("BOT_TOKEN")
+if not STRING_SESSION: missing_vars.append("STRING_SESSION")
+if not MONGO_DB_URI: missing_vars.append("MONGO_DB_URI")
+
+if missing_vars:
+    print(f"CRITICAL: Missing essential environment variables: {', '.join(missing_vars)}")
+    print("Please set them in your environment or .env file.")
+    sys.exit(1)
 
 REDIS_URI = os.getenv("REDIS_URI", "redis://localhost:6379")
 
