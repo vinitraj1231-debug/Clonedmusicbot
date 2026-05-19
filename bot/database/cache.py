@@ -6,6 +6,12 @@ class Cache:
     def __init__(self):
         self.redis = redis.from_url(config.REDIS_URI, decode_responses=True)
 
+    async def ping(self):
+        try:
+            return await self.redis.ping()
+        except Exception:
+            return False
+
     async def set_queue(self, chat_id: int, queue: list):
         await self.redis.set(f"queue:{chat_id}", json.dumps(queue))
 

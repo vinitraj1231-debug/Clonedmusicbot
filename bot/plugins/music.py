@@ -3,7 +3,7 @@ from pyrogram.types import Message
 from bot.helpers.playback import play_logic
 import config
 
-@Client.on_message(filters.command(["play", "p"]) & filters.group)
+@Client.on_message(filters.command(["play", "p"], prefixes=config.PREFIXES) & filters.group)
 async def play_command(client: Client, message: Message):
     if len(message.command) < 2:
         return await message.reply_text("Give me a song name or link!")
@@ -11,7 +11,7 @@ async def play_command(client: Client, message: Message):
     query = " ".join(message.command[1:])
     await play_logic(message, query)
 
-@Client.on_message(filters.command(["skip", "next"]) & filters.group)
+@Client.on_message(filters.command(["skip", "next"], prefixes=config.PREFIXES) & filters.group)
 async def skip_command(client: Client, message: Message):
     from bot.core.client import core
     from bot.database.cache import cache
@@ -34,7 +34,7 @@ async def skip_command(client: Client, message: Message):
             pass
         await message.reply_text("Queue empty, leaving voice chat.")
 
-@Client.on_message(filters.command(["stop", "end"]) & filters.group)
+@Client.on_message(filters.command(["stop", "end"], prefixes=config.PREFIXES) & filters.group)
 async def stop_command(client: Client, message: Message):
     from bot.core.client import core
     from bot.database.cache import cache

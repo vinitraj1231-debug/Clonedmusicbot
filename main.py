@@ -53,6 +53,16 @@ async def shutdown(stop_event, signal=None):
 async def main():
     LOGGER.info("Starting Supreme Music Bot...")
 
+    # Verify Database Connection
+    if not await db.ping():
+        LOGGER.critical("Could not connect to MongoDB. Please check MONGO_DB_URI.")
+        return
+
+    # Verify Redis Connection
+    if not await cache.ping():
+        LOGGER.critical("Could not connect to Redis. Please check REDIS_URI.")
+        return
+
     # Start Health Check Server for Render
     await health_server.start()
 
@@ -70,7 +80,11 @@ async def main():
                 await cache.set_queue(chat_id, queue)
                 if queue:
                     next_song = queue[0]
-                    await core.call.play(chat_id, MediaStream(next_song["link"], audio_parameters=AudioQuality.HIGH))
+                    try:
+                        await core.call.play(chat_id, MediaStream(next_song["link"], audio_parameters=AudioQuality.HIGH))
+                    except Exception as e:
+                        LOGGER.error(f"Error playing next song in {chat_id}: {e}")
+                        await core.call.leave_call(chat_id)
                 else:
                     await core.call.leave_call(chat_id)
             else:
@@ -114,21 +128,7 @@ async def main():
     LOGGER.info("Stopping components...")
 
     await health_server.stop()
-
-    try:
-        await core.call.stop()
-    except:
-        pass
-
-    try:
-        await core.bot.stop()
-    except:
-        pass
-
-    try:
-        await core.assistant.stop()
-    except:
-        pass
+    await core.stop_all()
 
 if __name__ == "__main__":
     try:
