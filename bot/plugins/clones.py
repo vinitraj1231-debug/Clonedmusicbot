@@ -16,7 +16,7 @@ async def start_clone(user_id, bot_token):
             bot_token=bot_token,
             plugins=dict(root="bot/plugins"),
         )
-        await new_bot.start()
+        await core.start_client(new_bot)
         core.clones[user_id] = new_bot
         bot_me = await new_bot.get_me()
         LOGGER.info(f"Started clone: @{bot_me.username}")

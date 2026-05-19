@@ -93,8 +93,8 @@ async def main():
             LOGGER.error(f"Error in stream_end_handler for {chat_id}: {e}")
 
     try:
-        await core.bot.start()
-        await core.assistant.start()
+        await core.start_client(core.bot)
+        await core.start_client(core.assistant)
         await core.call.start()
     except Exception as e:
         LOGGER.critical(f"Failed to start core components: {e}")
