@@ -1,6 +1,8 @@
 import asyncio
 import logging
 import signal
+import os
+from aiohttp import web
 from bot.core.client import core
 from pytgcalls.types import StreamEnded
 from pytgcalls.types.stream import MediaStream, AudioQuality
@@ -17,6 +19,30 @@ logging.basicConfig(
 
 LOGGER = logging.getLogger("Main")
 
+class HealthServer:
+    def __init__(self):
+        self.runner = None
+
+    async def start(self):
+        app = web.Application()
+        app.router.add_get("/", self.health_check)
+        self.runner = web.AppRunner(app)
+        await self.runner.setup()
+        port = int(os.getenv("PORT", 8080))
+        site = web.TCPSite(self.runner, "0.0.0.0", port)
+        await site.start()
+        LOGGER.info(f"Health check server started on port {port}")
+
+    async def stop(self):
+        if self.runner:
+            await self.runner.cleanup()
+            LOGGER.info("Health check server stopped.")
+
+    async def health_check(self, request):
+        return web.Response(text="Supreme Music Bot is running!")
+
+health_server = HealthServer()
+
 async def shutdown(stop_event, signal=None):
     if signal:
         LOGGER.info(f"Received exit signal {signal.name}...")
@@ -27,23 +53,10 @@ async def shutdown(stop_event, signal=None):
 async def main():
     LOGGER.info("Starting Supreme Music Bot...")
 
-    try:
-        await core.bot.start()
-        await core.assistant.start()
-        await core.call.start()
-    except Exception as e:
-        LOGGER.critical(f"Failed to start core components: {e}")
-        return
+    # Start Health Check Server for Render
+    await health_server.start()
 
-    # Start saved clones
-    try:
-        clones = await db.clones.find().to_list(None)
-        for clone in clones:
-            asyncio.create_task(start_clone(clone["user_id"], clone["bot_token"]))
-    except Exception as e:
-        LOGGER.error(f"Error loading clones: {e}")
-
-    # PyTgCalls event handler
+    # PyTgCalls event handler (Register before starting call)
     @core.call.on_update()
     async def stream_end_handler(client, update):
         if not isinstance(update, StreamEnded):
@@ -65,6 +78,22 @@ async def main():
         except Exception as e:
             LOGGER.error(f"Error in stream_end_handler for {chat_id}: {e}")
 
+    try:
+        await core.bot.start()
+        await core.assistant.start()
+        await core.call.start()
+    except Exception as e:
+        LOGGER.critical(f"Failed to start core components: {e}")
+        return
+
+    # Start saved clones
+    try:
+        clones = await db.clones.find().to_list(None)
+        for clone in clones:
+            asyncio.create_task(start_clone(clone["user_id"], clone["bot_token"]))
+    except Exception as e:
+        LOGGER.error(f"Error loading clones: {e}")
+
     bot_me = await core.bot.get_me()
     assistant_me = await core.assistant.get_me()
 
@@ -83,6 +112,9 @@ async def main():
 
     # Gracefully stop components after wait
     LOGGER.info("Stopping components...")
+
+    await health_server.stop()
+
     try:
         await core.call.stop()
     except:
@@ -100,6 +132,10 @@ async def main():
 
 if __name__ == "__main__":
     try:
+        # Create downloads directory if not exists
+        if not os.path.exists("downloads"):
+            os.makedirs("downloads")
+
         asyncio.run(main())
     except KeyboardInterrupt:
         pass
