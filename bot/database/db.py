@@ -1,6 +1,10 @@
 from motor.motor_asyncio import AsyncIOMotorClient
 import config
 
+import logging
+
+LOGGER = logging.getLogger("Database")
+
 class Database:
     def __init__(self):
         self.client = AsyncIOMotorClient(config.MONGO_DB_URI)
@@ -9,6 +13,15 @@ class Database:
         self.chats = self.db["chats"]
         self.clones = self.db["clones"]
         self.settings = self.db["settings"]
+
+    async def ping(self):
+        try:
+            await self.client.admin.command('ping')
+            LOGGER.info("Successfully connected to MongoDB.")
+            return True
+        except Exception as e:
+            LOGGER.error(f"Failed to connect to MongoDB: {e}")
+            return False
 
     # --- User Management ---
     async def is_sudo(self, user_id: int):

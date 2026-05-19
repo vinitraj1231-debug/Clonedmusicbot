@@ -53,8 +53,16 @@ async def shutdown(stop_event, signal=None):
 async def main():
     LOGGER.info("Starting Supreme Music Bot...")
 
-    # Start Health Check Server for Render
+    # Start Health Check Server for Render immediately
     await health_server.start()
+
+    # Verify Connections
+    if not await db.ping():
+        LOGGER.critical("Could not connect to MongoDB. Exiting...")
+        return
+
+    if not await cache.ping():
+        LOGGER.warning("Could not connect to Redis. Queue features might not work.")
 
     # PyTgCalls event handler (Register before starting call)
     @core.call.on_update()
@@ -80,10 +88,15 @@ async def main():
 
     try:
         await core.bot.start()
+        LOGGER.info("Bot client started.")
         await core.assistant.start()
+        LOGGER.info("Assistant client started.")
         await core.call.start()
+        LOGGER.info("PyTgCalls started.")
     except Exception as e:
         LOGGER.critical(f"Failed to start core components: {e}")
+        # Stop health server if we fail to start
+        await health_server.stop()
         return
 
     # Start saved clones
@@ -114,21 +127,7 @@ async def main():
     LOGGER.info("Stopping components...")
 
     await health_server.stop()
-
-    try:
-        await core.call.stop()
-    except:
-        pass
-
-    try:
-        await core.bot.stop()
-    except:
-        pass
-
-    try:
-        await core.assistant.stop()
-    except:
-        pass
+    await core.stop_all()
 
 if __name__ == "__main__":
     try:

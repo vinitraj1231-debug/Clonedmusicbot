@@ -23,4 +23,18 @@ class SupremeCore:
         self.call = PyTgCalls(self.assistant)
         self.clones = {} # To keep track of running clone clients
 
+    async def stop_all(self):
+        try:
+            await self.call.stop()
+        except:
+            pass
+        try:
+            await self.bot.stop()
+        except:
+            pass
+        try:
+            await self.assistant.stop()
+        except:
+            pass
+
 core = SupremeCore()
