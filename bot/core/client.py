@@ -1,5 +1,13 @@
 import logging
 from pyrogram import Client
+import pyrogram.errors
+
+# Monkeypatch GroupcallForbidden for pytgcalls compatibility
+if not hasattr(pyrogram.errors, "GroupcallForbidden"):
+    class GroupcallForbidden(Exception):
+        pass
+    pyrogram.errors.GroupcallForbidden = GroupcallForbidden
+
 from pytgcalls import PyTgCalls
 import config
 
