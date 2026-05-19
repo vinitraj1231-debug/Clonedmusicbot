@@ -1,4 +1,5 @@
 import logging
+import asyncio
 from pyrogram import Client
 import pyrogram.errors
 
@@ -30,6 +31,18 @@ class SupremeCore:
         )
         self.call = PyTgCalls(self.assistant)
         self.clones = {} # To keep track of running clone clients
+
+    async def start_client(self, client: Client):
+        while True:
+            try:
+                await client.start()
+                break
+            except pyrogram.errors.FloodWait as e:
+                LOGGER.warning(f"FloodWait: Waiting for {e.value} seconds before retrying...")
+                await asyncio.sleep(e.value)
+            except Exception as e:
+                LOGGER.error(f"Failed to start client: {e}")
+                raise e
 
     async def stop_all(self):
         LOGGER.info("Stopping all clients...")
