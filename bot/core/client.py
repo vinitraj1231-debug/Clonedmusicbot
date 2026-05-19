@@ -9,10 +9,46 @@ if not hasattr(pyrogram.errors, "GroupcallForbidden"):
         pass
     pyrogram.errors.GroupcallForbidden = GroupcallForbidden
 
+import base64
+import struct
 from pytgcalls import PyTgCalls
 import config
 
 LOGGER = logging.getLogger("SupremeCore")
+
+def get_session_string():
+    session = config.STRING_SESSION.strip()
+    if not session:
+        return None
+
+    # Try to decode and check length
+    try:
+        # Add padding if missing
+        padded = session + "=" * (-len(session) % 4)
+        decoded = base64.urlsafe_b64decode(padded)
+
+        # Pyrogram v2 session string should be 271 bytes
+        if len(decoded) == 271:
+            return session
+
+        # v1 (32-bit) is 263 bytes
+        # v1 (64-bit) is 267 bytes
+        if len(decoded) in [263, 267]:
+            LOGGER.info(f"Detected Pyrogram v1 session string ({len(decoded)} bytes). Converting to v2...")
+            if len(decoded) == 263:
+                dc_id, test_mode, auth_key, user_id, is_bot = struct.unpack(">B?256sI?", decoded)
+            else:
+                dc_id, test_mode, auth_key, user_id, is_bot = struct.unpack(">B?256sQ?", decoded)
+
+            # Pack into v2 format (>BI?256sQ?)
+            # We need api_id, which we have in config
+            v2_data = struct.pack(">BI?256sQ?", dc_id, config.API_ID, test_mode, auth_key, user_id, is_bot)
+            return base64.urlsafe_b64encode(v2_data).decode().rstrip("=")
+
+    except Exception as e:
+        LOGGER.error(f"Error while validating session string: {e}")
+
+    return session
 
 class SupremeCore:
     def __init__(self):
@@ -27,7 +63,7 @@ class SupremeCore:
             "SupremeAssistant",
             api_id=config.API_ID,
             api_hash=config.API_HASH,
-            session_string=config.STRING_SESSION,
+            session_string=get_session_string(),
         )
         self.call = PyTgCalls(self.assistant)
         self.clones = {} # To keep track of running clone clients
