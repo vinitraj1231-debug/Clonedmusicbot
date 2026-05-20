@@ -31,7 +31,18 @@ async def play_logic(message: Message, query: str, video: bool = False):
                 stream = MediaStream(stream_url, video_parameters=VideoQuality.HD_720p)
             else:
                 stream = MediaStream(stream_url, audio_parameters=AudioQuality.HIGH)
-            await core.call.play(chat_id, stream)
+
+            # Check if already in call, if not join, if yes change stream
+            try:
+                await core.call.play(chat_id, stream)
+            except Exception:
+                # If play fails, try to leave and join again (might be stuck in a state)
+                try:
+                    await core.call.leave_call(chat_id)
+                except:
+                    pass
+                await core.call.play(chat_id, stream)
+
             await m.edit(f"Playing **{title}**")
         except Exception as e:
             await m.edit(f"Error: {e}")

@@ -23,9 +23,23 @@ def get_session_string():
 
     # Try to decode and check length
     try:
+        # Normalize session string: remove all whitespace/newlines that might have been copied
+        session = "".join(session.split())
+
         # Add padding if missing
         padded = session + "=" * (-len(session) % 4)
-        decoded = base64.urlsafe_b64decode(padded)
+
+        try:
+            decoded = base64.urlsafe_b64decode(padded)
+        except Exception:
+            # Fallback to standard base64 if urlsafe fails
+            try:
+                decoded = base64.b64decode(padded)
+            except Exception as e:
+                LOGGER.error(f"Failed to decode session string: {e}")
+                return session
+
+        LOGGER.info(f"Session string decoded length: {len(decoded)} bytes")
 
         # Pyrogram v2 session string should be 271 bytes
         if len(decoded) == 271:
@@ -35,15 +49,24 @@ def get_session_string():
         # v1 (64-bit) is 267 bytes
         if len(decoded) in [263, 267]:
             LOGGER.info(f"Detected Pyrogram v1 session string ({len(decoded)} bytes). Converting to v2...")
-            if len(decoded) == 263:
-                dc_id, test_mode, auth_key, user_id, is_bot = struct.unpack(">B?256sI?", decoded)
-            else:
-                dc_id, test_mode, auth_key, user_id, is_bot = struct.unpack(">B?256sQ?", decoded)
+            try:
+                if len(decoded) == 263:
+                    # dc_id (B), test_mode (?), auth_key (256s), user_id (I), is_bot (?)
+                    dc_id, test_mode, auth_key, user_id, is_bot = struct.unpack(">B?256sI?", decoded)
+                else:
+                    # dc_id (B), test_mode (?), auth_key (256s), user_id (Q), is_bot (?)
+                    dc_id, test_mode, auth_key, user_id, is_bot = struct.unpack(">B?256sQ?", decoded)
 
-            # Pack into v2 format (>BI?256sQ?)
-            # We need api_id, which we have in config
-            v2_data = struct.pack(">BI?256sQ?", dc_id, config.API_ID, test_mode, auth_key, user_id, is_bot)
-            return base64.urlsafe_b64encode(v2_data).decode().rstrip("=")
+                # Pack into v2 format (>BI?256sQ?)
+                # dc_id (B), api_id (I), test_mode (?), auth_key (256s), user_id (Q), is_bot (?)
+                v2_data = struct.pack(">BI?256sQ?", dc_id, config.API_ID, test_mode, auth_key, user_id, is_bot)
+                return base64.urlsafe_b64encode(v2_data).decode().rstrip("=")
+            except Exception as e:
+                LOGGER.error(f"Error during session conversion: {e}")
+                return session
+
+        if len(decoded) != 271:
+            LOGGER.warning(f"Session string decodes to {len(decoded)} bytes, but Pyrogram v2 expects 271 bytes. This may fail.")
 
     except Exception as e:
         LOGGER.error(f"Error while validating session string: {e}")
