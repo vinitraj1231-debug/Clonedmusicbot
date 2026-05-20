@@ -47,15 +47,16 @@ def get_session_string():
 
         # v1 (32-bit) is 263 bytes
         # v1 (64-bit) is 267 bytes
-        if len(decoded) in [263, 267]:
+        # Sometimes it might be 264 or 268 due to extra padding bytes
+        if len(decoded) in [263, 264, 267, 268]:
             LOGGER.info(f"Detected Pyrogram v1 session string ({len(decoded)} bytes). Converting to v2...")
             try:
-                if len(decoded) == 263:
+                if len(decoded) in [263, 264]:
                     # dc_id (B), test_mode (?), auth_key (256s), user_id (I), is_bot (?)
-                    dc_id, test_mode, auth_key, user_id, is_bot = struct.unpack(">B?256sI?", decoded)
+                    dc_id, test_mode, auth_key, user_id, is_bot = struct.unpack(">B?256sI?", decoded[:263])
                 else:
                     # dc_id (B), test_mode (?), auth_key (256s), user_id (Q), is_bot (?)
-                    dc_id, test_mode, auth_key, user_id, is_bot = struct.unpack(">B?256sQ?", decoded)
+                    dc_id, test_mode, auth_key, user_id, is_bot = struct.unpack(">B?256sQ?", decoded[:267])
 
                 # Pack into v2 format (>BI?256sQ?)
                 # dc_id (B), api_id (I), test_mode (?), auth_key (256s), user_id (Q), is_bot (?)
@@ -100,7 +101,7 @@ class SupremeCore:
                 LOGGER.warning(f"FloodWait: Waiting for {e.value} seconds before retrying...")
                 await asyncio.sleep(e.value)
             except Exception as e:
-                LOGGER.error(f"Failed to start client: {e}")
+                LOGGER.exception(f"Failed to start client {client.name}: {e}")
                 raise e
 
     async def stop_all(self):

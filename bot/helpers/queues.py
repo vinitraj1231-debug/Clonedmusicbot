@@ -3,7 +3,7 @@ import logging
 
 LOGGER = logging.getLogger("QueueManager")
 
-async def add_to_queue(chat_id, title, duration, link, thumb, user_id, user_name):
+async def add_to_queue(chat_id, title, duration, link, thumb, user_id, user_name, video=False):
     queue = await cache.get_queue(chat_id)
     item = {
         "title": title,
@@ -12,6 +12,7 @@ async def add_to_queue(chat_id, title, duration, link, thumb, user_id, user_name
         "thumb": thumb,
         "user_id": user_id,
         "user_name": user_name,
+        "video": video
     }
     queue.append(item)
     await cache.set_queue(chat_id, queue)

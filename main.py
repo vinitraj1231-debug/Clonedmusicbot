@@ -5,7 +5,8 @@ import os
 from aiohttp import web
 from bot.core.client import core
 from pytgcalls.types import StreamEnded
-from pytgcalls.types.stream import MediaStream, AudioQuality
+from pytgcalls.types.stream import MediaStream, AudioQuality, VideoQuality
+from bot.core.extractor import extractor
 from bot.database.cache import cache
 from bot.database.db import db
 from bot.plugins.clones import start_clone
@@ -79,8 +80,20 @@ async def main():
                     await cache.set_queue(chat_id, queue)
                     next_song = queue[0]
                     LOGGER.info(f"Playing next song from queue in {chat_id}: {next_song['title']}")
+
+                    # Re-extract stream URL as it might have expired
+                    stream_url, _ = await extractor.get_stream_url(next_song["link"])
+                    if not stream_url:
+                        LOGGER.error(f"Failed to get stream URL for next song: {next_song['title']}")
+                        # Try skip to next
+                        return await stream_end_handler(client, update)
+
                     try:
-                        await core.call.play(chat_id, MediaStream(next_song["link"], audio_parameters=AudioQuality.HIGH))
+                        if next_song.get("video"):
+                            stream = MediaStream(stream_url, video_parameters=VideoQuality.HD_720p)
+                        else:
+                            stream = MediaStream(stream_url, audio_parameters=AudioQuality.HIGH)
+                        await core.call.play(chat_id, stream)
                     except Exception as e:
                         LOGGER.error(f"Error playing next song in {chat_id}: {e}")
                         await cache.clear_queue(chat_id)
@@ -105,8 +118,8 @@ async def main():
 
     # Start saved clones
     try:
-        clones = await db.clones.find().to_list(None)
-        for clone in clones:
+        clones_list = await db.clones.find().to_list(None)
+        for clone in clones_list:
             asyncio.create_task(start_clone(clone["user_id"], clone["bot_token"]))
     except Exception as e:
         LOGGER.error(f"Error loading clones: {e}")
