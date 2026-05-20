@@ -15,7 +15,8 @@ async def play_command(client: Client, message: Message):
 async def skip_command(client: Client, message: Message):
     from bot.core.client import core
     from bot.database.cache import cache
-    from pytgcalls.types.stream import MediaStream, AudioQuality
+    from bot.core.extractor import extractor
+    from pytgcalls.types.stream import MediaStream, AudioQuality, VideoQuality
 
     chat_id = message.chat.id
     queue = await cache.get_queue(chat_id)
@@ -24,8 +25,20 @@ async def skip_command(client: Client, message: Message):
         queue.pop(0)
         await cache.set_queue(chat_id, queue)
         next_song = queue[0]
-        await core.call.play(chat_id, MediaStream(next_song["link"], audio_parameters=AudioQuality.HIGH))
-        await message.reply_text(f"Skipped! Now playing: **{next_song['title']}**")
+
+        m = await message.reply_text(f"Skipping... Next: **{next_song['title']}**")
+
+        stream_url, _ = await extractor.get_stream_url(next_song["link"])
+        if not stream_url:
+            return await m.edit("Failed to get stream URL for next song.")
+
+        if next_song.get("video"):
+            stream = MediaStream(stream_url, video_parameters=VideoQuality.HD_720p)
+        else:
+            stream = MediaStream(stream_url, audio_parameters=AudioQuality.HIGH)
+
+        await core.call.play(chat_id, stream)
+        await m.edit(f"Skipped! Now playing: **{next_song['title']}**")
     else:
         await cache.clear_queue(chat_id)
         try:

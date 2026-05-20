@@ -23,7 +23,7 @@ async def play_logic(message: Message, query: str, video: bool = False):
     duration = info.get("duration", 0)
     thumb = info.get("thumbnail", config.THUMBNAIL)
 
-    pos = await add_to_queue(chat_id, title, duration, stream_url, thumb, user_id, message.from_user.first_name)
+    pos = await add_to_queue(chat_id, title, duration, query, thumb, user_id, message.from_user.first_name, video=video)
 
     if pos == 1:
         try:
@@ -35,11 +35,13 @@ async def play_logic(message: Message, query: str, video: bool = False):
             # Check if already in call, if not join, if yes change stream
             try:
                 await core.call.play(chat_id, stream)
-            except Exception:
+            except Exception as e:
                 # If play fails, try to leave and join again (might be stuck in a state)
+                import logging
+                logging.getLogger("Playback").warning(f"Initial play failed in {chat_id}, retrying after leave: {e}")
                 try:
                     await core.call.leave_call(chat_id)
-                except:
+                except Exception:
                     pass
                 await core.call.play(chat_id, stream)
 

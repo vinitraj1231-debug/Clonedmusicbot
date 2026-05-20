@@ -5,6 +5,10 @@ RUN apt-get update && apt-get install -y \
     git \
     build-essential \
     python3-dev \
+    libopus-dev \
+    libssl-dev \
+    libffi-dev \
+    libasound2-dev \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

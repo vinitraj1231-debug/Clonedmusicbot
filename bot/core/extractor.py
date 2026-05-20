@@ -12,6 +12,12 @@ ytdl_opts = {
     "no_warnings": True,
     "extract_flat": "in_playlist",
     "cachedir": False,
+    "source_address": "0.0.0.0", # Bind to ipv4 since ipv6 can cause issues
+    "headers": {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+        "Accept-Language": "en-US,en;q=0.9",
+    }
 }
 
 if os.path.exists(config.YT_COOKIES_PATH):
@@ -30,11 +36,11 @@ class YoutubeExtractor:
 
     async def get_stream_url(self, url: str):
         info = await self.extract_info(url)
-        if "error" in info:
+        if not info or "error" in info:
             # Fallback for search
-            if "ytsearch" not in url:
+            if url and "ytsearch" not in url and not (url.startswith("http") or url.startswith("www")):
                 return await self.get_stream_url(f"ytsearch:{url}")
-            return None, info["error"]
+            return None, info.get("error", "Unknown extraction error")
 
         if "entries" in info:
             info = info["entries"][0]
