@@ -34,21 +34,41 @@ async def clone_bot(client: Client, message: Message):
     user_id = message.from_user.id
 
     if user_id in core.clones:
-        return await message.reply_text("You already have a running clone. Stop it first (coming soon) or contact admin.")
+        return await message.reply_text("You already have a running clone. Use /stopclone to stop it first.")
 
     m = await message.reply_text("Cloning your bot...")
 
-    bot_me = await start_clone(user_id, bot_token)
-    if bot_me:
-        # Save to DB for persistence
-        await db.clones.update_one(
-            {"user_id": user_id},
-            {"$set": {"bot_token": bot_token, "bot_username": bot_me.username}},
-            upsert=True
-        )
-        await m.edit(f"Successfully cloned! @{bot_me.username} is now running.")
-    else:
-        await m.edit("Failed to start the clone. Check your token.")
+    try:
+        bot_me = await start_clone(user_id, bot_token)
+        if bot_me:
+            # Save to DB for persistence
+            await db.clones.update_one(
+                {"user_id": user_id},
+                {"$set": {"bot_token": bot_token, "bot_username": bot_me.username}},
+                upsert=True
+            )
+            await m.edit(f"Successfully cloned! @{bot_me.username} is now running.")
+        else:
+            await m.edit("Failed to start the clone. Ensure your bot token is valid and not already in use.")
+    except Exception as e:
+        LOGGER.error(f"Error in clone_bot command: {e}")
+        await m.edit(f"An unexpected error occurred: {e}")
+
+@Client.on_message(filters.command("stopclone", prefixes=config.PREFIXES) & filters.private)
+async def stop_clone_cmd(client: Client, message: Message):
+    user_id = message.from_user.id
+    if user_id not in core.clones:
+        return await message.reply_text("You don't have any running clone.")
+
+    m = await message.reply_text("Stopping your clone...")
+    try:
+        clone_client = core.clones.pop(user_id)
+        await clone_client.stop()
+        await db.clones.delete_one({"user_id": user_id})
+        await m.edit("Successfully stopped and removed your clone.")
+    except Exception as e:
+        LOGGER.error(f"Error stopping clone: {e}")
+        await m.edit(f"Failed to stop clone: {e}")
 
 @Client.on_message(filters.command("clones", prefixes=config.PREFIXES) & filters.user(config.OWNER_ID))
 async def list_clones(client: Client, message: Message):

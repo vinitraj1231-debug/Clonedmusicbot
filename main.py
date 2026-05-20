@@ -69,28 +69,31 @@ async def main():
     # PyTgCalls event handler (Register before starting call)
     @core.call.on_update()
     async def stream_end_handler(client, update):
-        if not isinstance(update, StreamEnded):
-            return
-
-        chat_id = update.chat_id
-        try:
-            queue = await cache.get_queue(chat_id)
-            if queue:
-                queue.pop(0)
-                await cache.set_queue(chat_id, queue)
-                if queue:
+        if isinstance(update, StreamEnded):
+            chat_id = update.chat_id
+            LOGGER.info(f"Stream ended in chat {chat_id}")
+            try:
+                queue = await cache.get_queue(chat_id)
+                if len(queue) > 1:
+                    queue.pop(0)
+                    await cache.set_queue(chat_id, queue)
                     next_song = queue[0]
+                    LOGGER.info(f"Playing next song from queue in {chat_id}: {next_song['title']}")
                     try:
                         await core.call.play(chat_id, MediaStream(next_song["link"], audio_parameters=AudioQuality.HIGH))
                     except Exception as e:
                         LOGGER.error(f"Error playing next song in {chat_id}: {e}")
+                        await cache.clear_queue(chat_id)
                         await core.call.leave_call(chat_id)
                 else:
-                    await core.call.leave_call(chat_id)
-            else:
-                await core.call.leave_call(chat_id)
-        except Exception as e:
-            LOGGER.error(f"Error in stream_end_handler for {chat_id}: {e}")
+                    LOGGER.info(f"Queue empty for {chat_id}, leaving call.")
+                    await cache.clear_queue(chat_id)
+                    try:
+                        await core.call.leave_call(chat_id)
+                    except Exception:
+                        pass
+            except Exception as e:
+                LOGGER.error(f"Error in stream_end_handler for {chat_id}: {e}")
 
     try:
         await core.start_client(core.bot)
